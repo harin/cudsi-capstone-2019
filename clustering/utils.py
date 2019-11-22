@@ -83,11 +83,12 @@ def load_entities(file_path='../data/embedding/entites.txt'):
 def get_largest_cluster(y_pred):
     cluster_size = {}
     cluster_labels = set(y_pred)
-    max_cluster_label = -1
-    max_cluster_size = -1
+    max_cluster_label = -2
+    max_cluster_size = 0
     for cluster_label in cluster_labels:
         count = np.sum(y_pred == cluster_label)
-        if count > max_cluster_size:
+        # -1 is noise cluster
+        if count > max_cluster_size and cluster_label != -1:
             max_cluster_label = cluster_label
             max_cluster_size = count
     return max_cluster_label, max_cluster_size
@@ -101,6 +102,8 @@ def max_cluster_metric(y_true, y_pred, name=None):
         
         # get cluster with the largest population of label
         max_cluster_label, max_cluster_size = get_largest_cluster(y_pred.iloc[label_y_true])
+        
+#         print('label=',label,'max_cluster_label=', max_cluster_label)
         label_y_pred = (y_pred == max_cluster_label).astype(int)
         precision, recall, f_score, support = precision_recall_fscore_support(
             label_y_true, label_y_pred, average=None
