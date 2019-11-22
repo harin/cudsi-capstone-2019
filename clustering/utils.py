@@ -93,32 +93,68 @@ def get_largest_cluster(y_pred):
             max_cluster_size = count
     return max_cluster_label, max_cluster_size
 
-def max_cluster_metric(y_true, y_pred, name=None):
-    labels = set(y_true)
-    result = []
-    for label in labels:
-        if not isinstance(label, str): continue # remove NaN
-        label_y_true = (y_true == label).astype(int)
+# def max_cluster_metric(y_true, y_pred, name=None):
+#     labels = set(y_true)
+#     result = []
+#     for label in labels:
+#         if not isinstance(label, str): continue # remove NaN
+#         label_y_true = (y_true == label).astype(int)
         
-        # get cluster with the largest population of label
-        max_cluster_label, max_cluster_size = get_largest_cluster(y_pred.iloc[label_y_true])
+#         # get cluster with the largest population of label
+#         max_cluster_label, max_cluster_size = get_largest_cluster(y_pred[label_y_true])
         
-#         print('label=',label,'max_cluster_label=', max_cluster_label)
-        label_y_pred = (y_pred == max_cluster_label).astype(int)
-        precision, recall, f_score, support = precision_recall_fscore_support(
-            label_y_true, label_y_pred, average=None
-        )
+#         label_y_pred = (y_pred[label_y_true] == max_cluster_label).astype(int)
+#         print('num_label', np.sum(label_y_true), 'num_pred_true', np.sum(label_y_pred))
+#         precision, recall, f_score, support = precision_recall_fscore_support(
+#             label_y_true, label_y_pred, average=None
+#         )
         
-        scores = {
-            'label': label,
-            'precision': precision[1],
-            'recall': recall[1],
-            'f_score': f_score[1]
-        }
-        if name: scores['name'] = name
-        result.append(scores)
         
-    return result
+#         scores = {
+#             'label': label,
+#             'precision': precision[1],
+#             'recall': recall[1],
+#             'f_score': f_score[1]
+#         }
+#         if name: scores['name'] = name
+#         result.append(scores)
+        
+#     return result
+
+def max_cluster_metric(sample_df, col):
+    results = []
+    for label in set(sample_df.label.tolist()):
+        y_true = (sample_df.label == label).to_numpy()
+        
+        cluster_sizes = sample_df[sample_df.label== label][[col]]\
+            .reset_index().groupby(col).count().sort_values('index')
+        valid_cluster_sizes = cluster_sizes[cluster_sizes.index != -1]
+        print(cluster_sizes)
+        if valid_cluster_sizes.shape[0] == 0:
+            scores = {
+                'label': label,
+                'precision': 0,
+                'recall': 0,
+                'f_score': 0,
+                'name': col
+            }
+        else:
+            max_cluster_label = valid_cluster_sizes.iloc[-1].name
+            y_pred = (sample_df[col] == max_cluster_label).to_numpy()
+            precision, recall, f_score, support = precision_recall_fscore_support(
+                y_true, y_pred, average=None
+            )
+
+            scores = {
+                'label': label,
+                'precision': precision[1],
+                'recall': recall[1],
+                'f_score': f_score[1],
+                'name': col
+            }
+        results.append(scores)
+    return results
+          
         
 def print_result_df(result_df):
     metrics = ['precision', 'recall', 'f_score']
